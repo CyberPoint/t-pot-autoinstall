@@ -1,0 +1,37 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.hostname = "tpot"
+  config.vm.box = "ubuntu/trusty64"
+
+  # ssh
+  config.vm.network "forwarded_port", host: 64295, guest: 64295
+
+  # honeypots
+  config.vm.network "forwarded_port", host: 50021, guest: 21
+  config.vm.network "forwarded_port", host: 50080, guest: 80
+  config.vm.network "forwarded_port", host: 50135, guest: 135
+  config.vm.network "forwarded_port", host: 50445, guest: 445
+  config.vm.network "forwarded_port", host: 53306, guest: 3306
+  config.vm.network "forwarded_port", host: 59200, guest: 9200
+
+  config.vm.define :tpot do |tpot|
+  end
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "tpot"
+    vb.memory = "8192"
+    vb.cpus = "2"
+    vb.gui = false
+  end
+
+  config.vm.provision "ansible" do |ansible|
+    ansible.inventory_path = ".vagrant/provisioners/ansible/inventory"
+    ansible.playbook = "vagrant.yml"
+    ansible.limit = "all"
+    ansible.verbose = false
+  end
+end

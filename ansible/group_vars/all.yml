@@ -1,0 +1,27 @@
+---
+
+  # ssh authkeys and new port
+  sshk: ~/.ssh/id_rsa.pub
+  sshp: 64295
+
+  # tpot types: standard, honeypot, industrial, full
+  tpot_img: honeypot
+  tpot_tag: latest1603
+
+  # elasticsearch
+  elk_es: "2.x"
+
+  # kibana
+  elk_kb: "4.6"
+
+  # logstash
+  elk_ls: "2.3"
+
+  # disable ews
+  #ews_off: 1
+
+
+  user: "{{ansible_user}}"
+  home: "/home/{{user}}"
+  geo_cty: /opt/geoip/GeoLiteCity.dat
+  geo_asn: /opt/geoip/GeoIPASNum.dat

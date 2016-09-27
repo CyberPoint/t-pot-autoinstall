@@ -1,0 +1,11 @@
+---
+# tpot.yml - tpot installer
+#   ansible implementation of install.sh
+
+  - name: tpot
+    hosts: tpot
+    roles:
+    - os.common
+    - os.extras
+    - tpot
+    - os.reboot

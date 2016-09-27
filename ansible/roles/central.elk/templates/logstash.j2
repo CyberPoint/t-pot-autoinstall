@@ -1,0 +1,22 @@
+input {
+{% for host in groups["sensor"] %}
+  http {
+    codec => json
+    host  => "127.0.0.1"
+    port  => {{hostvars[host]["tunp"]}}
+  }
+{% endfor %}
+}
+
+filter {
+  # remove http "headers" from output filter
+  mutate {
+    remove_field => [ "headers" ]
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => [ "localhost:9200" ]
+  }
+}

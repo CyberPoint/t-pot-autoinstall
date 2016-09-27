@@ -1,0 +1,26 @@
+---
+
+  - name: kibana - install apt-key
+    apt_key:
+      url: https://packages.elastic.co/GPG-KEY-elasticsearch
+      state: present
+
+  - name: kibana - install repo
+    lineinfile:
+      line: "deb https://packages.elastic.co/kibana/{{elk_kb}}/debian stable main"
+      dest: /etc/apt/sources.list
+      state: present
+
+  - name: kibana - install package
+    apt:
+      update_cache: yes
+      name: "{{item}}"
+      state: latest
+    with_items:
+    - kibana
+
+  - name: kibana - start
+    service:
+      name: kibana
+      state: started
+      enabled: yes

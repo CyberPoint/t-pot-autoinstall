@@ -1,0 +1,33 @@
+---
+# central.yml - modified tpot hp setup
+#   configure multiple honeypots to be deployed and
+#   aggregate log data into a centralized elk server
+
+  - name: central.common
+    hosts:
+    - server
+    - sensor
+    roles:
+    - os.common
+    - os.extras
+
+  - name: central.server
+    hosts:
+    - server
+    roles:
+    - elk.elasticsearch
+    - elk.logstash
+    - elk.kibana
+    - central.elk
+    - os.reboot
+
+  - name: central.sensors
+    vars:
+    - is_custom: 1
+    hosts:
+    - sensor
+    roles:
+    - elk.logstash
+    - tpot
+    - central.tpot
+    - os.reboot

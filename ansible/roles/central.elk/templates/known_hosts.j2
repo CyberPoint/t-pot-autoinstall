@@ -1,0 +1,9 @@
+{% for host in groups["sensor"] %}
+##### {{host}}
+{% if "ansible_ssh_host_key_ecdsa_public" in hostvars[host] %}
+{{host}} ecdsa-sha2-nistp256 {{hostvars[host]["ansible_ssh_host_key_ecdsa_public"]}}
+{% endif %}
+{% if "ansible_ssh_host_key_rsa_public" in hostvars[host] %}
+{{host}} ssh-rsa {{hostvars[host]["ansible_ssh_host_key_rsa_public"]}}
+{% endif %}
+{% endfor %}

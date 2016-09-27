@@ -1,0 +1,47 @@
+---
+
+  - name: load logstash.conf
+    template:
+      src: logstash.j2
+      dest: /etc/logstash/conf.d/logstash.conf
+
+  - name: copy tunnel key (tun.key.pub)
+    authorized_key:
+      user: "{{user}}"
+      key: "{{lookup('file', '{{playbook_dir}}/resources/tun.key.pub')}}"
+      state: present
+
+  - name: logstash run as tpot
+    replace:
+      dest: /etc/init.d/logstash
+      regexp: '^(LS_USER)=.*$'
+      replace: '\1=tpot'
+
+  - name: logstash permissions
+    file:
+      path: "{{item}}"
+      state: directory
+      recurse: yes
+      owner: tpot
+    with_items:
+    - /var/log/logstash
+    - /var/lib/logstash
+
+  - name: check logstash.pid
+    stat:
+      path: /var/run/logstash.pid
+    register: pid
+
+  - name: logstash permissions
+    file:
+      path: /var/run/logstash.pid
+      owner: tpot
+    when: pid.stat.exists
+
+  - name: service startup
+    service:
+      name: "{{item}}"
+      state: started
+      enabled: yes
+    with_items:
+    - logstash

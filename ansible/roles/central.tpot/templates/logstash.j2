@@ -1,0 +1,289 @@
+# Input section
+input {
+
+  # Suricata
+  file {
+    path => [ "/data/suricata/log/eve.json" ]
+    codec => json
+    type => "Suricata"
+  }
+
+  # P0f
+  file {
+    path => [ "/data/suricata/log/p0f.json" ]
+    codec => json
+    type => "P0f"
+  }
+
+  # Conpot
+  file {
+    path => [ "/data/conpot/log/conpot.log" ]
+    type => "ConPot"
+  }
+
+  # Cowrie
+  file {
+    path => [ "/data/cowrie/log/cowrie.json" ]
+    codec => json
+    type => "Cowrie"
+  }
+
+  # Dionaea
+  file {
+    path => [ "/data/ews/dionaea/ews.json" ]
+    codec => json
+    type => "Dionaea"
+  }
+
+  # Elasticpot
+  file {
+    path => [ "/data/elasticpot/log/elasticpot.log" ]
+    codec => json
+    type => "ElasticPot"
+  }
+
+  # eMobility
+  file {
+    path => [ "/data/ews/emobility/ews.json" ]
+    codec => json
+    type => "eMobility"
+  }
+
+  # Glastopf
+  file {
+    path => [ "/data/glastopf/log/glastopf.log" ]
+    type => "Glastopf"
+  }
+
+  # Honeytrap
+  file {
+    path => [ "/data/honeytrap/log/attacker.log" ]
+    type => "Honeytrap"
+  }
+
+  # Host Syslog
+  file {
+    path => [ "/data/host/log/syslog", "/data/host/log/auth.log" ]
+    codec => plain
+    type => "Syslog"
+  }
+}
+
+##### Filter Section
+filter {
+
+  # Suricata
+  if [type] == "Suricata" {
+    date {
+      match => [ "timestamp", "ISO8601" ]
+    }
+  }
+
+  # P0f
+  if [type] == "P0f" {
+    date {
+      match => [ "timestamp", "yyyy'/'MM'/'dd HH:mm:ss" ]
+      remove_field => ["timestamp"]
+    }
+    mutate {
+      rename => {
+        "server_port" => "dest_port"
+        "server_ip" => "dest_ip"
+        "client_port" => "src_port"
+        "client_ip" => "src_ip"
+      }
+    }
+  }
+
+  # Conpot
+  if [type] == "ConPot" {
+   grok {
+    break_on_match => true
+    match => { "message" => ["\A%{YEAR:year}-%{MONTHNUM:month}-%{MONTHDAY:day}%{SPACE}%{TIME:time}%{SPACE}%{NOTSPACE:proto}%{SPACE}%{CISCO_REASON}\('%{IP:src_ip}%{GREEDYDATA}", "\A%{YEAR:year}-%{MONTHNUM:month}-%{MONTHDAY:day}%{SPACE}%{TIME:time}%{SPACE}%{NOTSPACE}%{SPACE}%{URIPROTO:proto}%{SPACE}%{NOTSPACE}%{SPACE}%{NOTSPACE}%{SPACE}%{IP:src_ip}%{SPACE}%{GREEDYDATA}", "\A%{YEAR:year}-%{MONTHNUM:month}-%{MONTHDAY:day}%{SPACE}%{TIME:time}%{SPACE}%{NOTSPACE}%{SPACE}%{URIPROTO:proto}%{SPACE}%{NOTSPACE}%{SPACE}%{NOTSPACE}%{SPACE}%{IP:src_ip}%{GREEDYDATA}"] }
+   }
+    mutate {
+      add_field => [ "timestamp", "%{year}-%{month}-%{day}T%{time}" ]
+    }
+    date {
+      match => [ "timestamp" , "ISO8601" ]
+      remove_field => [ "year", "month", "day", "time"]
+    }
+  }
+
+  # Cowrie
+  if [type] == "Cowrie" {
+    date {
+      match => [ "timestamp", "ISO8601" ]
+    }
+    mutate {
+      rename => {
+        "dst_port" => "dest_port"
+        "dst_ip" => "dest_ip"
+      }
+    }
+  }
+
+  # Dionaea
+  if [type] == "Dionaea" {
+    date {
+      match => [ "timestamp", "ISO8601" ]
+    }
+  }
+
+  # ElasticPot
+  if [type] == "ElasticPot" {
+    date {
+      match => [ "timestamp", "ISO8601" ]
+    }
+  }
+
+  # eMobility
+  if [type] == "eMobility" {
+    date {
+      match => [ "timestamp", "ISO8601" ]
+    }
+  }
+
+  # Glastopf
+  if [type] == "Glastopf" {
+    grok {
+      match => [ "message", "\A%{TIMESTAMP_ISO8601}%{SPACE}%{NOTSPACE}%{SPACE}%{IP:src_ip}%{SPACE}%{WORD}%{SPACE}%{URIPROTO:http_method}%{SPACE}%{NOTSPACE:http_uri}%{SPACE}%{NOTSPACE}%{SPACE}%{HOSTNAME}:%{NUMBER:dest_port:integer}" ]
+    }
+    date {
+      match => [ "timestamp", "ISO8601" ]
+    }
+  }
+
+  # Honeytrap
+  if [type] == "Honeytrap" {
+    grok {
+      match => [ "message", "\A\[%{TIMESTAMP_ISO8601}%{SPACE}%{WORD}]%{SPACE}%{WORD:proto}%{SPACE}%{IP:src_ip}:%{NUMBER:src_port:integer}%{SPACE}%{NOTSPACE}%{SPACE}%{IP:dest_ip}:%{NUMBER:dest_port:integer}%{SPACE}%{WORD:md5}%{SPACE}%{WORD:sha512}%{SPACE}\(%{NUMBER:filesize}%{SPACE}%{WORD}\)" ]
+    }
+    date {
+      match => [ "timestamp", "ISO8601" ]
+    }
+  }
+
+  # Syslog
+  if [type] == "Syslog" {
+      grok {
+        match => { "message" => ["%{SYSLOGPAMSESSION}", "%{CRONLOG}", "%{SYSLOGLINE}"] }
+        overwrite => "message"
+      }
+      date {
+        match => [ "timestamp", "MMM  d HH:mm:ss", "MMM dd HH:mm:ss" ]
+        remove_field => [ "timestamp" ]
+      }
+      date {
+        match => [ "timestamp8601", "ISO8601" ]
+        remove_field => [ "timestamp8601" ]
+      }
+      grok {
+        match => { "message" => "Connection closed by %{IP:src_ip}" }
+        add_tag => [ "ssh_connection_closed" ]
+        tag_on_failure => []
+      }
+      grok {
+        match => { "message" => "Received disconnect from %{IP:src_ip}" }
+        add_tag => [ "ssh_connection_disconnect" ]
+        tag_on_failure => []
+      }
+      grok {
+        match => { "message" => "Failed password for invalid user %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2" }
+        add_tag => [ "ssh_failed_password" ]
+        tag_on_failure => []
+      }
+      grok {
+        match => { "message" => "Did not receive identification string from %{IP:src_ip}" }
+        add_tag => [ "ssh_no_id" ]
+        tag_on_failure => []
+      }
+      grok {
+        match => { "message" => "User %{USERNAME:username} from %{IP:src_ip} not allowed because not listed in AllowUsers" }
+        add_tag => [ "ssh_user_not_allowed" ]
+        tag_on_failure => []
+      }
+      grok {
+        match => { "message" => "authentication failure; logname=%{USERNAME:logname} uid=%{BASE10NUM:uid} euid=%{BASE10NUM:euid} tty=%{TTY:tty} ruser=%{USERNAME:ruser} rhost=(?:%{HOSTNAME:remote_host}|\s*) user=%{USERNAME:user}" }
+        add_tag => [ "ssh_auth_failure" ]
+        tag_on_failure => []
+      }
+      grok {
+        match => { "message" => "pam_unix\(sshd:auth\): authentication failure; logname= uid=0 euid=0 tty=%{NOTSPACE:tty} ruser= rhost=(?:%{HOSTNAME:remote_host}|\s*)  user=%{USERNAME:user}" }
+        add_tag => [ "ssh_auth_failure" ]
+        tag_on_failure => []
+      }
+      grok {
+        match => { "message" => "Failed password for %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2" }
+        add_tag => [ "ssh_failed_password" ]
+        tag_on_failure => []
+      }
+      grok {
+        match => { "message" => "Accepted password for %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2" }
+        add_tag => [ "ssh_accepted_password" ]
+        tag_on_failure => []
+      }
+      grok {
+        match => { "message" => "Accepted publickey for %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2" }
+        add_tag => [ "ssh_accepted_pubkey" ]
+        tag_on_failure => []
+      }
+      grok {
+        match => { "message" => "Accepted keyboard-interactive/pam for %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2" }
+        add_tag => [ "ssh_accepted_interactive" ]
+        tag_on_failure => []
+      }
+  }
+
+  # Add geo coordinates / ASN info
+  if [src_ip]  {
+    geoip {
+      source => "src_ip"
+      target => "geoip"
+      database => "{{geo_cty}}"
+      add_field => [ "[geoip][coordinates]", "%{[geoip][longitude]}" ]
+      add_field => [ "[geoip][coordinates]", "%{[geoip][latitude]}"  ]
+    }
+    mutate {
+      convert => [ "[geoip][coordinates]", "float" ]
+    }
+    geoip {
+      source => "src_ip"
+      target => "geoip"
+      database => "{{geo_asn}}"
+      add_field => [ "[geoip][full]", "%{[geoip][number]} %{[geoip][asn]}" ]
+    }
+  }
+
+  # In some rare conditions dest_port, src_port is indexed as string, forcing integer for now
+  if [dest_port] {
+    mutate {
+        convert => { "dest_port" => "integer" }
+    }
+  }
+  if [src_port] {
+    mutate {
+        convert => { "src_port" => "integer" }
+    }
+  }
+
+  # Add/change sensor field to reflect hostname
+  if [sensor] {
+    mutate {
+      update => { "sensor" => "%{host}" }
+    }
+  } else {
+    mutate {
+      add_field => { "sensor" => "%{host}" }
+    }
+  }
+}
+
+# Output section
+output {
+  http {
+    codec => json
+    http_method => post
+    url => "http://127.0.0.1:9999"
+  }
+}

@@ -1,0 +1,12 @@
+[Unit]
+Wants=network-online.target
+After=network.target network-online.target
+
+[Service]
+Restart=always
+RestartSec=3
+ExecStart=/root/sshtun.sh
+Type=forking
+
+[Install]
+WantedBy=multi-user.target

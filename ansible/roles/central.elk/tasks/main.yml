@@ -1,0 +1,96 @@
+---
+
+  - name: install packages
+    apt:
+      name: "{{item}}"
+      state: latest
+    with_items:
+    - autossh
+
+  - name: copy tunnel key (tun.key)
+    copy:
+      src: "{{playbook_dir}}/resources/tun.key"
+      dest: "/root/tun.key"
+      mode: 0400
+
+  - name: ssh config - ipv4
+    lineinfile:
+      dest: /etc/ssh/ssh_config
+      line: "{{item}}"
+      state: present
+    with_items:
+    - "AddressFamily inet"
+    - "GlobalKnownHostsFile /etc/ssh/ssh_known_hosts"
+
+  - name: ssh known_hosts keys
+    template:
+      src: known_hosts.j2
+      dest: /etc/ssh/ssh_known_hosts
+
+  - name: ssh tunnels - systemd
+    copy:
+      src: sshtun.service
+      dest: /lib/systemd/system/sshtun.service
+    register: sshtun
+
+  - name: systemctl daemon
+    command: systemctl daemon-reload
+    when: sshtun.changed
+
+  - name: ssh tunnels - sshtun.sh
+    template:
+      src: sshtun_sh.j2
+      dest: /root/sshtun.sh
+      mode: 0700
+      owner: root
+
+  - name: logstash.conf path
+    file:
+      path: /etc/logstash/conf.d
+      state: directory
+
+  - name: load logstash.conf
+    template:
+      src: logstash.j2
+      dest: /etc/logstash/conf.d/logstash.conf
+
+  - name: kibana path
+    file:
+      path: /opt/kibana
+      state: directory
+
+  - name: kibana config
+    replace:
+      dest: /opt/kibana/config/kibana.yml
+      regexp: '^# (kibana.defaultAppId:) "discover"'
+      replace: '\1 dashboard/Default'
+
+  - name: kibana plugins
+    command: "/opt/kibana/bin/kibana plugin -i {{item.i}} -u {{item.u}}"
+    with_items:
+    - { "i": "tagcloud", "u": "https://github.com/stormpython/tagcloud/archive/master.zip" }
+    - { "i": "heatmap", "u": "https://github.com/stormpython/heatmap/archive/master.zip" }
+    ignore_errors: yes
+
+  - name: iptables config
+    copy:
+      src: etc_iptables
+      dest: /etc/iptables.cfg
+      mode: 0400
+      owner: root
+
+  - name: iptables-restore script
+    copy:
+      src: iptables
+      dest: /etc/network/if-pre-up.d/iptables
+      mode: 0755
+      owner: root
+
+  - name: service startup
+    service:
+      name: "{{item}}"
+      state: started
+      enabled: yes
+    with_items:
+    - sshtun
+    - logstash

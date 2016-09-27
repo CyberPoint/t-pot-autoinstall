@@ -1,0 +1,11 @@
+[server]
+10.0.0.100  name=bat    ansible_user=user
+
+[sensor]
+10.0.0.200  name=cat    tunp=65000  ansible_user=user
+10.0.0.201  name=hat    tunp=65001  ansible_user=user
+10.0.0.202  name=mat    tunp=65002  ansible_user=user
+10.0.0.203  name=rat    tunp=65003  ansible_user=user
+
+[tpot]
+10.0.0.10   name=tpot   ansible_user=user   tpot_img=standard

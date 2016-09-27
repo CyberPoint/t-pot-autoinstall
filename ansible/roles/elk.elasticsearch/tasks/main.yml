@@ -1,0 +1,27 @@
+---
+
+  - name: elasticsearch - install apt-key
+    apt_key:
+      url: https://packages.elastic.co/GPG-KEY-elasticsearch
+      state: present
+
+  - name: elasticsearch - install repo
+    lineinfile:
+      line: "deb https://packages.elastic.co/elasticsearch/{{elk_es}}/debian stable main"
+      dest: /etc/apt/sources.list
+      state: present
+
+  - name: elasticsearch - install package
+    apt:
+      update_cache: yes
+      name: "{{item}}"
+      state: latest
+    with_items:
+    - default-jre-headless
+    - elasticsearch
+
+  - name: elasticsearch - start
+    service:
+      name: elasticsearch
+      state: restarted
+      enabled: yes

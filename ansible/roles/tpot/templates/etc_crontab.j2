@@ -1,0 +1,28 @@
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+17 *    * * *   root    cd / && run-parts --report /etc/cron.hourly
+25 6    * * *   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.daily )
+47 6    * * 7   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.weekly )
+52 6    1 * *   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.monthly )
+
+# Determine running containers every 120s
+*/2 * * * *   root  /usr/bin/status.sh > {{home}}/docker-status
+
+# Check if containers and services are up
+*/5 * * * *   root  /usr/bin/check.sh
+
+# Check if updated images are available and download them
+27 1 * * *    root  while read x;do /usr/bin/docker pull dtagdevsec/\$x:{{dtag}};done < /data/images.conf
+
+# Restart docker service and containers
+27 3 * * *    root  /usr/bin/dcres.sh
+
+# Delete elastic indices older than 90 days
+27 4 * * *    root  /usr/bin/docker exec elk bash -c '/usr/local/bin/curator --host 127.0.0.1 delete indices --older-than 90 --time-unit days --timestring '%Y.%m.%d''
+
+# Update IP and erase check.lock if it exists
+27 15 * * *   root  /etc/rc.local
+
+# Check for updated packages every sunday, upgrade and reboot
+27 16 * * 0   root  apt-get update -y && apt-get upgrade -y && sleep 5 && reboot

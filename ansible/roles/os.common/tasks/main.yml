@@ -1,0 +1,129 @@
+---
+
+  - name: set hostname
+    hostname:
+      name: "{{name}}"
+
+  - name: set environment
+    copy:
+      src: env.sh
+      dest: /etc/profile.d/env.sh
+
+  - name: /etc/hosts
+    template:
+      src: etc_hosts.j2
+      dest: /etc/hosts
+
+  - name: upgrade system
+    apt:
+      cache_valid_time: 86400
+      update_cache: yes
+      upgrade: full
+
+  - name: clean /etc/apt/sources.list
+    lineinfile:
+      dest: /etc/apt/sources.list
+      regexp: "^.*cdrom.*$"
+      state: absent
+
+  - name: install system packages
+    apt:
+      name: "{{item}}"
+      state: latest
+    with_items:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - dialog
+    - dstat
+    - ethtool
+    - genisoimage
+    - git
+    - htop
+    - libpam-google-authenticator
+    - lm-sensors
+    - lsof
+    - ntp
+    - openssh-server
+    - python-pip
+    - pv
+    - syslinux
+    - tmux
+    - unzip
+    - tree
+    - vim
+
+  - name: ssh - clean /etc/ssh/ssh_config
+    lineinfile:
+      dest: /etc/ssh/ssh_config
+      line: "UseRoaming no"
+      state: present
+
+  - name: ssh - create .ssh
+    file:
+      path: "{{item.p}}"
+      mode: "{{item.m}}"
+      owner: "{{item.o}}"
+      state: directory
+    with_items:
+    - { "p": "{{home}}/.ssh", "m": "0700", "o": "{{user}}" }
+    - { "p": "/root/.ssh", "m": "0700", "o": "root" }
+
+  - name: ssh - install sshkey
+    copy:
+      src: "{{sshk}}"
+      dest: "{{home}}/.ssh/authorized_keys"
+      owner: "{{user}}"
+      mode: 0600
+
+  - name: ssh - disable password auth
+    replace:
+      dest: /etc/ssh/sshd_config
+      regexp: '(PasswordAuthentication).*yes'
+      replace: '\1 no'
+
+  - name: enable services
+    service:
+      name: "{{item}}"
+      state: started
+      enabled:  yes
+    with_items:
+    - ssh
+
+  - name: install pip packages
+    pip:
+      name: "{{item}}"
+      state: latest
+    with_items:
+    - pip
+
+  - name: get external ip
+    uri:
+      url: http://myexternalip.com/raw
+      method: GET
+      return_content: yes
+    register: ext_ip
+
+  - name: save public ip
+    set_fact:
+      public_ip: "{{ext_ip.content}}"
+
+  - name: apt update checks
+    lineinfile:
+      dest: /etc/apt/apt.conf.d/10periodic
+      line: "{{item}}"
+      state: present
+      create: yes
+    with_items:
+    - "APT::Periodic::Update-Package-Lists '1';"
+    - "APT::Periodic::Download-Upgradeable-Packages '0';"
+    - "APT::Periodic::AutocleanInterval '7';"
+
+  - name: sysctl - reboot on kernel panic
+    sysctl:
+      name: "{{item}}"
+      value: 1
+      state: present
+    with_items:
+    - kernel.panic
+    - kernel.panic_on_oops

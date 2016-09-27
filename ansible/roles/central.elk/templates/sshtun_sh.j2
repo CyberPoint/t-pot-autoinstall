@@ -1,0 +1,6 @@
+#!/bin/bash
+{% set remote = "localhost:9999" %}
+{% for host in groups["sensor"] %}
+{% set port = hostvars[host]["tunp"] %}
+/usr/bin/autossh -R {{remote}}:localhost:{{port}} {{user}}@{{host}} -p{{sshp}} -i /root/tun.key -N &
+{% endfor %}

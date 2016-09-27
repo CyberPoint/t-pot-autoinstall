@@ -1,0 +1,16 @@
+---
+
+- hosts: default
+  gather_facts: yes
+
+  vars_files:
+  - group_vars/all.yml
+  - group_vars/vagrant.yml
+  vars:
+  - name: tpot
+  - ansible_user: vagrant
+
+  roles:
+  - os.common
+  - tpot
+  - os.reboot

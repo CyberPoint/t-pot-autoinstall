@@ -1,0 +1,45 @@
+---
+
+  - name: geoip - create /opt/geoip
+    file:
+      state: directory
+      dest: /opt/geoip
+
+  - name: geoip - get databases
+    get_url:
+      url: "{{item}}"
+      dest: "/opt/geoip/{{item|basename}}"
+    with_items:
+    - "http://geolite.maxmind.com/download/geoip/database/GeoLiteCity.dat.gz"
+    - "http://download.maxmind.com/download/geoip/database/asnum/GeoIPASNum.dat.gz"
+    register: geoip
+
+  - name: geoip - uncompress
+    shell: "gunzip -f /opt/geoip/*.gz"
+    when: geoip.changed
+
+  - name: logstash - install apt-key
+    apt_key:
+      url: https://packages.elastic.co/GPG-KEY-elasticsearch
+      state: present
+
+  - name: logstash - install repo
+    lineinfile:
+      line: "deb https://packages.elastic.co/logstash/{{elk_ls}}/debian stable main"
+      dest: /etc/apt/sources.list
+      state: present
+
+  - name: logstash - install package
+    apt:
+      update_cache: yes
+      name: "{{item}}"
+      state: latest
+    with_items:
+    - default-jre-headless
+    - logstash
+
+  - name: logstash - start
+    service:
+      name: logstash
+      state: restarted
+      enabled: yes
